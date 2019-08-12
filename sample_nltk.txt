@@ -1,0 +1,55 @@
+As part of testing one of my client code, I used cProfile to profile some code. Though I had never tried profiling code before, I found cProfile easy to use. However, I faced some challenges on how to use the stats which cProfile provided. I looked at ways to use the stats but I didn’t find an option where I can get specific columns from the stats and then use it. I ended up saving the stats to a CSV file and then use pandas to use the stats better. So in this blog, I will give you details on how can you go about doing it.
+
+What is cProfile?
+In case you want to get the stats on how your code performs with regards to memory and time, you need to look at some code profilers. This is especially useful in case you want to check what code sections took too long and what functions are getting called how many times. cProfile is one of the standard libraries which Python provides for profiling.
+
+The output of cProfile is a binary file that contains all the stats. Python also provides a pstats.Stats class to print the stats to a python shell. Below is an example of how you can use cProfile to profile a piece of code
+
+""" 
+Script for using cProfile and pstats to get the stats for your code
+"""
+import cProfile
+import pstats, math
+ 
+pr = cProfile.Profile()
+pr.enable()
+print(math.sin(1024)) # any function call or code you want to profile. I am using a simple math function
+pr.disable()
+pr.dump_stats('restats')
+p = pstats.Stats('restats')
+ 
+p.sort_stats('time').print_stats() # print the stats after sorting by time
+In case I wanted to reuse the stats, I couldn’t find any easy way of achieving it.
+
+Saving the stats to a csv file
+I googled a bit and found a useful stackoverflow answer on how to save cProfile results to readable external file. I could use StringIO to stream the result after some data modification and save it to a CSV file.
+
+import cProfile
+import pstats, math
+import io
+import pandas as pd
+ 
+pr = cProfile.Profile()
+pr.enable()
+print(math.sin(1024))
+pr.disable()
+ 
+result = io.StringIO()
+pstats.Stats(pr,stream=result).print_stats()
+result=result.getvalue()
+# chop the string into a csv-like buffer
+result='ncalls'+result.split('ncalls')[-1]
+result='\n'.join([','.join(line.rstrip().split(None,5)) for line in result.split('\n')])
+# save it to disk
+ 
+with open('test.csv', 'w+') as f:
+    #f=open(result.rsplit('.')[0]+'.csv','w')
+    f.write(result)
+    f.close()
+Reading the file using Pandas
+Now I could simply use pandas dataframe to get the specific stats I need and then reuse it in my code
+
+df = pd.read_csv("test.csv")
+req_column = df.ncalls # gets only the column related to the number of times methods are called
+print (req_column)
+Hope you find this article useful. Happy testing and enjoy profiling python cod
